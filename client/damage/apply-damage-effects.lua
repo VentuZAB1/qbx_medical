@@ -48,7 +48,7 @@ end
 ---enforce following arm disabilities on the player for a set time period:
 ---Disable left turns in vehicles; disable weapon firing for left arm injuries, and weapon aiming for right arm injuries.
 ---@param ped number the player's ped
----@param leftArmDamaged boolean true if the player's left arm is damaged, false if the right arm is damaged. 
+---@param leftArmDamaged boolean true if the player's left arm is damaged, false if the right arm is damaged.
 local function disableArms(ped, leftArmDamaged)
     local disableTimer = 15
     while disableTimer > 0 do
@@ -65,7 +65,7 @@ local function disableArms(ped, leftArmDamaged)
         end
 
         disableTimer -= 1
-        Wait(1)
+        Wait(300) -- Slightly reduced frequency from 200ms to 300ms for better performance
     end
 end
 
@@ -84,7 +84,7 @@ local function playBrainDamageEffectAndRagdoll(ped)
 
     DoScreenFadeOut(100)
     while not IsScreenFadedOut() do
-        Wait(0)
+        Wait(10) -- Small wait to prevent excessive CPU usage during fade
     end
 
     if not IsPedRagdoll(ped) and IsPedOnFoot(ped) and not IsPedSwimming(ped) then

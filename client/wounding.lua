@@ -14,16 +14,51 @@ local function getWorstInjury()
     return level
 end
 
-CreateThread(function()
-    while true do
-        if NumInjuries > 0 then
-            local level = getWorstInjury()
+-- Use statebag changes to update movement rate only when injuries change
+local currentMovementLevel = 0
+local isMovementThreadActive = false
+
+-- Function to update movement rate based on current injuries
+local function updateMovementRate()
+    if NumInjuries > 0 then
+        local level = getWorstInjury()
+        if level ~= currentMovementLevel then
             SetPedMoveRateOverride(cache.ped, sharedConfig.woundLevels[level].movementRate)
-            Wait(5)
-        else
-            Wait(1000)
+            currentMovementLevel = level
         end
+
+        -- Start movement thread only if we have injuries and it's not already running
+        if not isMovementThreadActive then
+            isMovementThreadActive = true
+            CreateThread(function()
+                while NumInjuries > 0 do
+                    local newLevel = getWorstInjury()
+                    if newLevel ~= currentMovementLevel then
+                        SetPedMoveRateOverride(cache.ped, sharedConfig.woundLevels[newLevel].movementRate)
+                        currentMovementLevel = newLevel
+                    end
+                    Wait(1000) -- Reduced frequency from 300ms to 1000ms
+                end
+                -- Reset movement when no injuries
+                SetPedMoveRateOverride(cache.ped, 1.0)
+                currentMovementLevel = 0
+                isMovementThreadActive = false
+            end)
+        end
+    else
+        -- No injuries, reset movement
+        if currentMovementLevel ~= 0 then
+            SetPedMoveRateOverride(cache.ped, 1.0)
+            currentMovementLevel = 0
+        end
+        isMovementThreadActive = false
     end
+end
+
+-- Listen for injury changes via statebag handlers (already set up in main.lua)
+-- We'll call updateMovementRate when injuries change
+AddStateBagChangeHandler(BODY_PART_STATE_BAG_PREFIX, ('player:%s'):format(cache.serverId), function(bagName, key, value, reserved, replicated)
+    updateMovementRate()
 end)
 
 local function makePlayerBlackout()
@@ -31,7 +66,7 @@ local function makePlayerBlackout()
 
     DoScreenFadeOut(500)
     while not IsScreenFadedOut() do
-        Wait(0)
+        Wait(10) -- Small wait to prevent excessive CPU usage during fade
     end
 
     if not IsPedRagdoll(cache.ped) and IsPedOnFoot(cache.ped) and not IsPedSwimming(cache.ped) then
@@ -48,7 +83,7 @@ exports('MakePlayerBlackout', makePlayerBlackout)
 local function makePlayerFadeOut()
     DoScreenFadeOut(500)
     while not IsScreenFadedOut() do
-        Wait(0)
+        Wait(10) -- Small wait to prevent excessive CPU usage during fade
     end
     DoScreenFadeIn(500)
 end

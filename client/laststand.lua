@@ -99,11 +99,12 @@ function StartLastStand(attacker, weapon)
         end
     end)
 
+    -- Optimized laststand controls loop
     CreateThread(function()
         while DeathState == sharedConfig.deathState.LAST_STAND do
             DisableControls()
             PlayLastStandAnimation()
-            Wait(0)
+            Wait(500) -- Reduced frequency from 300ms to 500ms for better performance
         end
         startLastStandLock = false
     end)

@@ -47,13 +47,22 @@ function OnDeath(attacker, weapon)
 
     WaitForPlayerToStopMoving()
 
-    CreateThread(function()
-        while DeathState == sharedConfig.deathState.DEAD do
-            DisableControls()
-            SetCurrentPedWeapon(cache.ped, `WEAPON_UNARMED`, true)
-            Wait(0)
-        end
-    end)
+    -- Use statebag change to trigger control disabling instead of continuous loop
+    local controlsThread = nil
+
+    local function startControlsLoop()
+        if controlsThread then return end
+        controlsThread = CreateThread(function()
+            while DeathState == sharedConfig.deathState.DEAD do
+                DisableControls()
+                SetCurrentPedWeapon(cache.ped, `WEAPON_UNARMED`, true)
+                Wait(300) -- Run at 3.3 FPS when dead for better performance
+            end
+            controlsThread = nil
+        end)
+    end
+
+    startControlsLoop()
     LocalPlayer.state.invBusy = true
 
     ResurrectPlayer()

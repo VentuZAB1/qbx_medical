@@ -219,14 +219,36 @@ local function checkForDamage()
     playerArmor = armor
 end
 
----Checks the player for damage, applies injuries, and damage effects
+-- Optimized damage checking - reduced frequency and smarter monitoring
+local lastHealthCheck = 0
+local lastArmorCheck = 0
+local isDamageCheckActive = false
+
 CreateThread(function()
     while true do
-        checkForDamage()
-        if damageEffectsEnabled then
-            ApplyDamageEffects()
+        local currentHealth = GetEntityHealth(cache.ped)
+        local currentArmor = GetPedArmour(cache.ped)
+
+        -- Only check for damage if health or armor actually changed
+        if currentHealth ~= lastHealthCheck or currentArmor ~= lastArmorCheck then
+            checkForDamage()
+            lastHealthCheck = currentHealth
+            lastArmorCheck = currentArmor
+
+            -- Apply damage effects more frequently when recently damaged
+            if damageEffectsEnabled then
+                ApplyDamageEffects()
+            end
+            Wait(200) -- Check more frequently when damage is detected
+        else
+            -- No damage detected, check less frequently
+            if damageEffectsEnabled and NumInjuries > 0 then
+                ApplyDamageEffects()
+                Wait(800) -- Run damage effects at reduced rate when no new damage
+            else
+                Wait(1000) -- No injuries, check very infrequently
+            end
         end
-        Wait(100)
     end
 end)
 

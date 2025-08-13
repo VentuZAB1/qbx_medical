@@ -216,12 +216,41 @@ RegisterNetEvent('qbx_medical:client:heal', function(type)
     exports.qbx_core:Notify(locale('success.wounds_healed'), 'success')
 end)
 
+-- Optimized limb alert system - only show alerts when injuries change or periodically
+local lastInjuryCount = 0
+local lastAlertTime = 0
+
+local function checkAndShowLimbAlert()
+    local currentTime = GetGameTimer()
+    local timeSinceLastAlert = currentTime - lastAlertTime
+
+    -- Show alert if injury count changed or enough time has passed
+    if NumInjuries ~= lastInjuryCount or timeSinceLastAlert >= (1000 * config.messageTimer) then
+        doLimbAlert()
+        lastInjuryCount = NumInjuries
+        lastAlertTime = currentTime
+    end
+end
+
+-- Monitor for injury changes via existing statebag handlers and periodic checks
 CreateThread(function()
     while true do
-        Wait((1000 * config.messageTimer))
-        doLimbAlert()
+        checkAndShowLimbAlert()
+        Wait(5000) -- Check much less frequently, rely on injury changes to trigger alerts
     end
 end)
+
+-- Listen for injury changes to trigger immediate alerts
+for bodyPartKey in pairs(sharedConfig.bodyParts) do
+    local bodyPartStateBag = BODY_PART_STATE_BAG_PREFIX .. bodyPartKey
+    AddStateBagChangeHandler(bodyPartStateBag, ('player:%s'):format(cache.serverId), function(_, _, value)
+        -- Trigger alert check when injuries change
+        CreateThread(function()
+            Wait(100) -- Small delay to ensure NumInjuries is updated
+            checkAndShowLimbAlert()
+        end)
+    end)
+end
 
 ---Revives player, healing all injuries
 RegisterNetEvent('qbx_medical:client:playerRevived', function()
