@@ -32,6 +32,10 @@ end)
 AddStateBagChangeHandler(DEATH_STATE_STATE_BAG, nil, function(bagName, _, value)
 	local playerId = GetPlayerFromStateBagName(bagName)
 	local player = exports.qbx_core:GetPlayer(playerId)
+
+	-- If not available stop running code
+	if not player then return end
+
 	player.Functions.SetMetaData('isdead', value == sharedConfig.deathState.DEAD)
 	player.Functions.SetMetaData('inlaststand', value == sharedConfig.deathState.LAST_STAND)
 	Player(playerId).state:set("isDead", value == sharedConfig.deathState.DEAD or value == sharedConfig.deathState.LAST_STAND, true)
